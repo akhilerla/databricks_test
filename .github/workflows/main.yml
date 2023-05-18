@@ -2,7 +2,14 @@ name: CICD
 
 on:
   push:
-
+    branches:
+      - feature/*
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - images
+      - terraform
+      - azure-pipeline.yml
 
 env:
   DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
