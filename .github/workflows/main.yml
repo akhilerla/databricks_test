@@ -2,7 +2,14 @@ name: CICD
 
 on:
   push:
-
+    branches:
+      - 'dev*'
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - images
+      - terraform
+      - azure-pipeline.yml
 
 env:
   DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
@@ -14,7 +21,7 @@ permissions:
 
 jobs:
   OnPush:
-    if: github.ref_name == 'refs/heads/devl'
+    if: startsWith(github.ref_name, 'refs/heads/dev')
     environment: dev
     runs-on: ubuntu-latest
     steps:
