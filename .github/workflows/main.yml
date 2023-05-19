@@ -2,20 +2,12 @@ name: CICD
 
 on:
   push:
-
-
-env:
-  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-  REPO_DIRECTORY: ${{ secrets.REPO_DIRECTORY }}
-
-permissions:
-  checks: write
+    branches:
+      - dev
 
 jobs:
-  OnPush:
-    if: github.ref_name == 'refs/heads/devl'
-    environment: dev
+  OnMerge:
+    if: github.event_name == 'push' 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -30,18 +22,6 @@ jobs:
         run: |
           pip install databricks-cli
 
-      - name: Check if Databricks Repository exists
+      - name: Update Databricks Repository
         run: |
-          databricks repos list --output json > repos.json
-          jq -r ".[].path" repos.json | grep -q "^${REPO_DIRECTORY}$"
-          echo "REPO_EXISTS=$?" >> $GITHUB_ENV
-
-      - name: Push to Databricks Repository
-        run: |
-          REPO_EXISTS=$(cat $GITHUB_ENV | grep "REPO_EXISTS" | cut -d'=' -f2)
-          if [ "$REPO_EXISTS" -ne 0 ]; then
-            echo "Databricks Repository doesn't exist. Creating..."
-            databricks repos create --path $REPO_DIRECTORY
-          fi
-          cd $REPO_DIRECTORY
-          databricks repos import --path . --overwrite
+          databricks repos update --path '/Repos/aerla@ilstu.edu/databricks_test' --branch dev
