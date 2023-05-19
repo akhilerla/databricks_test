@@ -2,26 +2,44 @@ name: CICD
 
 on:
   push:
-    branches:
-      - dev
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - images
+      - terraform
+      - azure-pipeline.yml
+      
+env:
+  DATABRICKS_HOST: ${{SECRETS.DATABRICKS_HOST}}
+  DATABRICKS_TOKEN:  ${{SECRETS.DATABRICKS_TOKEN}}
+
+
+permissions:
+  checks: write
 
 jobs:
-  OnMerge:
-    if: github.event_name == 'push' 
+  OnPush:
+    if: github.ref_name == 'dev'
+    environment: dev
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+      
+    - name: Install libraries
+      run: |
+        pip install --upgrade pip nutter
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
+    - name: install-databricks-cli
+      uses: microsoft/install-databricks-cli@v1.0.0
 
-      - name: Install Databricks CLI
-        run: |
-          pip install databricks-cli
+    - name: Update databricks repo
+      run: |
+        databricks repos update --path /Repos/aerla@ilstu.edu/databricks_test --branch "${{github.ref_name}}"
+        
 
-      - name: Update Databricks Repository
-        run: |
-          databricks repos update --path '/Repos/aerla@ilstu.edu/databricks_test' --branch dev
