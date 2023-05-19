@@ -8,38 +8,51 @@ on:
       - images
       - terraform
       - azure-pipeline.yml
-      
-env:
-  DATABRICKS_HOST: ${{SECRETS.DATABRICKS_HOST}}
-  DATABRICKS_TOKEN:  ${{SECRETS.DATABRICKS_TOKEN}}
 
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+  REPO_DIRECTORY: ${{ secrets.REPO_DIRECTORY }}
 
 permissions:
   checks: write
 
 jobs:
   OnPush:
-    if: github.ref_name == 'dev'
     environment: dev
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
-      
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.8
-      
-    - name: Install libraries
-      run: |
-        pip install --upgrade pip nutter
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: install-databricks-cli
-      uses: microsoft/install-databricks-cli@v1.0.0
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
 
-    - name: Update databricks repo
-      run: |
-        databricks repos update --path /Repos/aerla@ilstu.edu/databricks_test --branch "${{github.ref_name}}"
-        
+      - name: Install libraries
+        run: |
+          pip install --upgrade pip nutter
+
+      - name: Install Databricks CLI
+        run: |
+          pip install databricks-cli
+
+      - name: Check if Databricks Repository exists
+        id: check_repo
+        run: |
+          databricks repos list --output json > repos.json
+          jq -e ".[] | select(.path == \"${{ env.REPO_DIRECTORY }}\")" repos.json > /dev/null
+          echo "REPO_EXISTS=$?" >> $GITHUB_ENV
+
+      - name: Create or Update Databricks Repository
+        run: |
+          REPO_EXISTS=$(cat $GITHUB_ENV | grep "REPO_EXISTS" | cut -d'=' -f2)
+          if [ "$REPO_EXISTS" -eq 0 ]; then
+            echo "Databricks Repository already exists. Updating..."
+            databricks repos update --path ${{ env.REPO_DIRECTORY }} --branch "${{ github.ref_name }}"
+          else
+            echo "Databricks Repository doesn't exist. Creating..."
+            databricks repos create --path ${{ env.REPO_DIRECTORY }} --branch "${{ github.ref_name }}"
+          fi
 
